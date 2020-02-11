@@ -19,11 +19,12 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
  */
 
 #include "SMTPMail.h"
-#include "base64/base64.h"
+//#include "base64/base64.h"
 #include <trantor/net/TcpClient.h>
 #include <trantor/net/EventLoopThread.h>
 #include <drogon/HttpAppFramework.h>
-#include <string>
+#include <drogon/utils/Utilities.h>
+//#include <string>
 
 using namespace drogon;
 using namespace trantor;
@@ -51,6 +52,7 @@ struct EMail
     std::string m_user;
     std::string m_passwd;
     states m_status;
+    std::string m_uuid;
     std::shared_ptr<trantor::TcpClient> m_socket;
     
     EMail(  const std::string &from,
@@ -66,7 +68,16 @@ struct EMail
             m_content(content),
             m_user(user),
             m_passwd(passwd),
-            m_socket(socket){ m_status = Init; }
+            m_socket(socket),
+            m_uuid(utils::getUuid())
+        {
+            m_status = Init;
+            LOG_WARN << "EMail instance constructed";
+        }
+        
+    ~EMail(){
+        LOG_WARN << "EMail instance destructed";
+    }
 };
 
 void SMTPMail::initAndStart(const Json::Value &config)
@@ -83,8 +94,9 @@ void SMTPMail::shutdown()
 
 void messagesHandle( const trantor::TcpConnectionPtr &connPtr,
     trantor::MsgBuffer *msg,
-    std::shared_ptr<EMail> email)
-{
+    std::shared_ptr<EMail> email,
+    const std::function<void(const std::string &msg)> &cb )
+{  
     auto msgSize = msg->readableBytes();
     std::string receievedMsg;
     while (msg->readableBytes() > 0)
@@ -102,7 +114,7 @@ void messagesHandle( const trantor::TcpConnectionPtr &connPtr,
         std::string outMsg;
         trantor::MsgBuffer out;
         
-        outMsg.append("EHLO localhost");
+        outMsg.append("EHLO ¡Hola!");
         outMsg.append("\r\n");
         
         out.append( outMsg.data(), outMsg.size());
@@ -113,18 +125,16 @@ void messagesHandle( const trantor::TcpConnectionPtr &connPtr,
     }
     else if ( email->m_status == EMail::HandShake && responseCode == "220" )
     {
-        LOG_WARN << "Enabling SSL";
-        
         std::string outMsg;
         trantor::MsgBuffer out;
         
-        outMsg.append("EHLO localhost");
+        outMsg.append("EHLO ¡Hola!");
         outMsg.append("\r\n");
         
         out.append( outMsg.data(), outMsg.size());
         
         connPtr->startClientEncryption([connPtr, out]() {
-                        LOG_INFO << "SSL established";
+                        //LOG_TRACE << "SSL established";
                         connPtr->send(std::move(out));
                     });
 
@@ -135,14 +145,12 @@ void messagesHandle( const trantor::TcpConnectionPtr &connPtr,
         std::string outMsg;
         trantor::MsgBuffer out;
         
-        outMsg.append("EHLO localhost");
+        outMsg.append("EHLO ¡Hola!");
         outMsg.append("\r\n");
         
         out.append( outMsg.data(), outMsg.size());
 
         connPtr->send(std::move(out));
-        
-        LOG_WARN << "Next to STARTTLS";
 
         email->m_status = EMail::Tls;
     }
@@ -158,8 +166,6 @@ void messagesHandle( const trantor::TcpConnectionPtr &connPtr,
         out.append( outMsg.data(), outMsg.size());
 
         connPtr->send(std::move(out));
-        
-        LOG_WARN << "Next to HandShake";
 
         email->m_status = EMail::HandShake;
     }
@@ -174,8 +180,6 @@ void messagesHandle( const trantor::TcpConnectionPtr &connPtr,
         out.append( outMsg.data(), outMsg.size());
 
         connPtr->send(std::move(out));
-        
-        LOG_WARN << "Next to User ID";
 
         email->m_status = EMail::User;
     }
@@ -186,14 +190,14 @@ void messagesHandle( const trantor::TcpConnectionPtr &connPtr,
         
         std::string screte(email->m_user);
 
-        outMsg.append(base64_encode(reinterpret_cast<const unsigned char*>(screte.c_str()), screte.length()));
+        //outMsg.append(base64_encode(reinterpret_cast<const unsigned char*>(screte.c_str()), screte.length()));
+        outMsg.append(utils::base64Encode(reinterpret_cast<const unsigned char*>(screte.c_str()), screte.length()));
+        
         outMsg.append("\r\n");
         
         out.append( outMsg.data(), outMsg.size());
 
         connPtr->send(std::move(out));
-
-        LOG_WARN << "Next to Password";
         
         email->m_status = EMail::Pass;
     }
@@ -204,14 +208,12 @@ void messagesHandle( const trantor::TcpConnectionPtr &connPtr,
         
         std::string screte(email->m_passwd);
 
-        outMsg.append(base64_encode(reinterpret_cast<const unsigned char*>(screte.c_str()), screte.length()));
+        outMsg.append(utils::base64Encode(reinterpret_cast<const unsigned char*>(screte.c_str()), screte.length()));
         outMsg.append("\r\n");
         
         out.append( outMsg.data(), outMsg.size());
 
         connPtr->send(std::move(out));
-        
-        LOG_WARN << "Next to Sender info";
 
         email->m_status = EMail::Mail;
     }
@@ -291,27 +293,38 @@ void messagesHandle( const trantor::TcpConnectionPtr &connPtr,
         email->m_status = EMail::Close;
 
          /*Callback here for succeed delievery is propable*/
+         cb( "EMail sent. ID : " + email->m_uuid );
     }
     else if ( email->m_status == EMail::Close )
     {
+        /*This part should be careful. As long as the disconnect()
+        is called in the same thread/loop as the messagesHandle(),
+        setMessageCallback(nullptr) is safe.
+        */
         email->m_socket->disconnect();
+        email->m_socket->setMessageCallback(nullptr);
         return;
     }
     else
     {
         email->m_status = EMail::Close;
         /*Callback here for notification is propable*/
+        cb( receievedMsg );
+        email->m_socket->disconnect();
+        email->m_socket->setMessageCallback(nullptr);
     }
 }
 
-bool SMTPMail::sendEmail( const std::string &mailServer,  
+std::string  SMTPMail::sendEmail( const std::string &mailServer,  
     const uint16_t &port,
     const std::string &from,
     const std::string &to,
     const std::string &subject,
     const std::string &content,
     const std::string &user,
-    const std::string &passwd )
+    const std::string &passwd,
+    const std::function<void(const std::string&)> &cb 
+    )
 {
     if ( mailServer.empty() || from.empty() || to.empty() || subject.empty() || user.empty() || passwd.empty()){
         LOG_WARN << "Invalid input(s) - "
@@ -322,9 +335,8 @@ bool SMTPMail::sendEmail( const std::string &mailServer,
                 << "\nsubject : " << subject
                 << "\nuser : " << user
                 << "\npasswd : " << passwd;
-        return false;
+        return std::string();
     }
-    LOG_INFO << "Ready to send email";
     LOG_TRACE << "New TcpClient : " << mailServer << ":" << port;
     
     //auto loop = app().getLoop();//m_thread->getLoop();
@@ -333,13 +345,13 @@ bool SMTPMail::sendEmail( const std::string &mailServer,
     
     auto tcpSocket =
             std::make_shared<trantor::TcpClient>(loop, InetAddress( mailServer, port, false ), "SMTPMail");
-    
+       
     //Create the email
     auto email = std::make_shared<EMail>(from, to, subject, content, user, passwd, tcpSocket);
     
     tcpSocket->setConnectionCallback(
-        [](const trantor::TcpConnectionPtr &socketPtr) {
-            if (socketPtr->connected())
+        [](const trantor::TcpConnectionPtr &connPtr) {
+            if (connPtr->connected())
             {
                 // send request;
                 LOG_TRACE << "Connection established!";
@@ -356,11 +368,13 @@ bool SMTPMail::sendEmail( const std::string &mailServer,
         LOG_ERROR << "Bad Server address";
         //thisPtr->onError(std::string("ReqResult::BadServerAddress"));
     });
+     
+    auto cb_( cb? cb : [](const std::string &msg){ LOG_INFO << "Default email callback : " << msg;});
     tcpSocket->setMessageCallback(
-        [email](const trantor::TcpConnectionPtr &socketPtr,
+        [email, cb_](const trantor::TcpConnectionPtr &connPtr,
                   trantor::MsgBuffer *msg) {
-            messagesHandle(socketPtr, msg, email);
+            messagesHandle(connPtr, msg, email, cb_);
         });
     tcpSocket->connect(); //Start trying to send the email
-    return true;
+    return email->m_uuid;
 }
