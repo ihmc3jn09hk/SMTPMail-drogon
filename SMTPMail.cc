@@ -19,12 +19,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
  */
 
 #include "SMTPMail.h"
-//#include "base64/base64.h"
 #include <trantor/net/TcpClient.h>
 #include <trantor/net/EventLoopThread.h>
 #include <drogon/HttpAppFramework.h>
 #include <drogon/utils/Utilities.h>
-//#include <string>
 
 using namespace drogon;
 using namespace trantor;
@@ -72,11 +70,9 @@ struct EMail
             m_uuid(utils::getUuid())
         {
             m_status = Init;
-            LOG_WARN << "EMail instance constructed";
         }
         
     ~EMail(){
-        LOG_WARN << "EMail instance destructed";
     }
 };
 
