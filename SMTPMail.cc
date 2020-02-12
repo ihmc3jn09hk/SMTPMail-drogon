@@ -74,7 +74,11 @@ struct EMail
         
     ~EMail(){
     }
+    
+    static std::unordered_map<std::string, std::shared_ptr<EMail>> m_emails;    //Container for processing emails
 };
+
+std::unordered_map<std::string, std::shared_ptr<EMail>> EMail::m_emails;
 
 void SMTPMail::initAndStart(const Json::Value &config)
 {
@@ -287,18 +291,11 @@ void messagesHandle( const trantor::TcpConnectionPtr &connPtr,
         connPtr->send(std::move(out));
         
         email->m_status = EMail::Close;
-
-         /*Callback here for succeed delievery is propable*/
-         cb( "EMail sent. ID : " + email->m_uuid );
     }
     else if ( email->m_status == EMail::Close )
     {
-        /*This part should be careful. As long as the disconnect()
-        is called in the same thread/loop as the messagesHandle(),
-        setMessageCallback(nullptr) is safe.
-        */
-        email->m_socket->disconnect();
-        email->m_socket->setMessageCallback(nullptr);
+        /*Callback here for succeed delievery is propable*/
+        cb( "EMail sent. ID : " + email->m_uuid );
         return;
     }
     else
@@ -306,8 +303,6 @@ void messagesHandle( const trantor::TcpConnectionPtr &connPtr,
         email->m_status = EMail::Close;
         /*Callback here for notification is propable*/
         cb( receievedMsg );
-        email->m_socket->disconnect();
-        email->m_socket->setMessageCallback(nullptr);
     }
 }
 
@@ -334,42 +329,58 @@ std::string  SMTPMail::sendEmail( const std::string &mailServer,
         return std::string();
     }
     LOG_TRACE << "New TcpClient : " << mailServer << ":" << port;
-    
+
     //auto loop = app().getLoop();//m_thread->getLoop();
     auto loop = app().getIOLoop(10); //Get the IO Loop
     assert(loop);                   //Should never be null
-    
+
     auto tcpSocket =
             std::make_shared<trantor::TcpClient>(loop, InetAddress( mailServer, port, false ), "SMTPMail");
-       
+
     //Create the email
     auto email = std::make_shared<EMail>(from, to, subject, content, user, passwd, tcpSocket);
-    
+    std::weak_ptr<EMail> email_wptr = email;
+
+    EMail::m_emails.emplace( email->m_uuid, email ); //Assuming there is no uuid collision
     tcpSocket->setConnectionCallback(
-        [](const trantor::TcpConnectionPtr &connPtr) {
-            if (connPtr->connected())
-            {
+        [email_wptr](const trantor::TcpConnectionPtr &connPtr) {
+            auto email_ptr = email_wptr.lock();
+            if ( !email_ptr ) {
+                LOG_WARN << "EMail pointer gone";
+                return;
+            }
+            if (connPtr->connected()) {
                 // send request;
                 LOG_TRACE << "Connection established!";
-            }
-            else
-            {
-                LOG_TRACE << "connection disconnect";
+            } else {
+                LOG_TRACE << "Connection disconnect";
+                EMail::m_emails.erase(email_ptr->m_uuid);   //Remove the email in list
                 //thisPtr->onError(std::string("ReqResult::NetworkFailure"));
             }
         });
     tcpSocket->setConnectionErrorCallback(
-      []() {
+      [email_wptr]() {
+        auto email_ptr = email_wptr.lock();
+        if ( !email_ptr ) {
+            LOG_ERROR << "EMail pointer gone";
+            return;
+        }
         // can't connect to server
         LOG_ERROR << "Bad Server address";
+        EMail::m_emails.erase(email_ptr->m_uuid);   //Remove the email in list
         //thisPtr->onError(std::string("ReqResult::BadServerAddress"));
     });
-     
     auto cb_( cb? cb : [](const std::string &msg){ LOG_INFO << "Default email callback : " << msg;});
     tcpSocket->setMessageCallback(
-        [email, cb_](const trantor::TcpConnectionPtr &connPtr,
+        [email_wptr, cb_](const trantor::TcpConnectionPtr &connPtr,
                   trantor::MsgBuffer *msg) {
-            messagesHandle(connPtr, msg, email, cb_);
+            auto email_ptr = email_wptr.lock();
+            if ( !email_ptr ) {
+                LOG_ERROR << "EMail pointer gone";
+                return;
+            }
+            //email->m_socket->disconnect();
+            messagesHandle(connPtr, msg, email_ptr, cb_);
         });
     tcpSocket->connect(); //Start trying to send the email
     return email->m_uuid;
