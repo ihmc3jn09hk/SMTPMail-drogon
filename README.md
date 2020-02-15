@@ -28,8 +28,9 @@ Add the reference header and get the plugin from the app(), E.g.
 
 //Inside some function, E.g. A controller function.
 ...
+//Send an email
 auto *smtpmailPtr = app().getPlugin<SMTPMail>();
-smtpmailPtr->sendEmail(
+auto id = smtpmailPtr->sendEmail(
           "127.0.0.1",                  //The server IP, dns not support by drogon tcp-socket at the moment
           587,                          //The port
           "mailer@something.com",       //Who send the email
@@ -40,7 +41,26 @@ smtpmailPtr->sendEmail(
           "123456"                      //User password
           );
 ...
-
+//Or get noted when email is sent
+...
+void callback(const std::string &msg)
+{ 
+  LOG_INFO << msg; /*Output e.g. "EMail sent. ID : 96ESERVDDFH17588ECF0C7B00326E3"*/
+  /*Do whatever you like*/
+}
+...
+auto *smtpmailPtr = app().getPlugin<SMTPMail>();
+auto id = smtpmailPtr->sendEmail(
+          "127.0.0.1",                  //The server IP, dns not support by drogon tcp-socket at the moment
+          587,                          //The port
+          "mailer@something.com",       //Who send the email
+          "receiver@otherthing.com",    //Send to whom
+          "Testing SMTPMail Function",  //Email Subject/Title
+          "Hello from drogon plugin",   //Content
+          "mailer@something.com",       //Login user
+          "123456",                     //User password
+          callback                      //Callback
+          );
 ```
 
 ```bash
