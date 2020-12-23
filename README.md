@@ -31,7 +31,7 @@ Add the reference header and get the plugin from the app(), E.g.
 //Send an email
 auto *smtpmailPtr = app().getPlugin<SMTPMail>();
 auto id = smtpmailPtr->sendEmail(
-          "127.0.0.1",                  //The server IP, dns not support by drogon tcp-socket at the moment
+          "127.0.0.1",                  //The server IP/DNS
           587,                          //The port
           "mailer@something.com",       //Who send the email
           "receiver@otherthing.com",    //Send to whom
@@ -51,7 +51,7 @@ void callback(const std::string &msg)
 ...
 auto *smtpmailPtr = app().getPlugin<SMTPMail>();
 auto id = smtpmailPtr->sendEmail(
-          "127.0.0.1",                  //The server IP, dns not support by drogon tcp-socket at the moment
+          "127.0.0.1",                  //The server IP/DNS
           587,                          //The port
           "mailer@something.com",       //Who send the email
           "receiver@otherthing.com",    //Send to whom
