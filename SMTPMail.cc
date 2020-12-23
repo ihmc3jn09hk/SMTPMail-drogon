@@ -330,58 +330,63 @@ std::string  SMTPMail::sendEmail( const std::string &mailServer,
     }
     LOG_TRACE << "New TcpClient : " << mailServer << ":" << port;
 
-    //auto loop = app().getLoop();//m_thread->getLoop();
-    auto loop = app().getIOLoop(10); //Get the IO Loop
-    assert(loop);                   //Should never be null
-
-    auto tcpSocket =
-            std::make_shared<trantor::TcpClient>(loop, InetAddress( mailServer, port, false ), "SMTPMail");
-
     //Create the email
-    auto email = std::make_shared<EMail>(from, to, subject, content, user, passwd, tcpSocket);
-    std::weak_ptr<EMail> email_wptr = email;
+    auto email = std::make_shared<EMail>(from, to, subject, content, user, passwd, nullptr);
 
-    EMail::m_emails.emplace( email->m_uuid, email ); //Assuming there is no uuid collision
-    tcpSocket->setConnectionCallback(
-        [email_wptr](const trantor::TcpConnectionPtr &connPtr) {
-            auto email_ptr = email_wptr.lock();
-            if ( !email_ptr ) {
-                LOG_WARN << "EMail pointer gone";
-                return;
-            }
-            if (connPtr->connected()) {
-                // send request;
-                LOG_TRACE << "Connection established!";
-            } else {
-                LOG_TRACE << "Connection disconnect";
-                EMail::m_emails.erase(email_ptr->m_uuid);   //Remove the email in list
-                //thisPtr->onError(std::string("ReqResult::NetworkFailure"));
-            }
-        });
-    tcpSocket->setConnectionErrorCallback(
-      [email_wptr]() {
-        auto email_ptr = email_wptr.lock();
-        if ( !email_ptr ) {
-            LOG_ERROR << "EMail pointer gone";
-            return;
-        }
-        // can't connect to server
-        LOG_ERROR << "Bad Server address";
-        EMail::m_emails.erase(email_ptr->m_uuid);   //Remove the email in list
-        //thisPtr->onError(std::string("ReqResult::BadServerAddress"));
+    auto resolver = app().getResolver();
+    resolver->resolve(mailServer,[email,port,cb](const trantor::InetAddress &addr){
+      auto loop = app().getIOLoop(10); //Get the IO Loop
+      assert(loop);                   //Should never be null
+      trantor::InetAddress addr_(addr.toIp(),port,false);
+      auto tcpSocket =
+              std::make_shared<trantor::TcpClient>(loop, addr_, "SMTPMail");
+
+      email->m_socket = tcpSocket;
+
+      std::weak_ptr<EMail> email_wptr = email;
+
+      EMail::m_emails.emplace( email->m_uuid, email ); //Assuming there is no uuid collision
+      tcpSocket->setConnectionCallback(
+          [email_wptr](const trantor::TcpConnectionPtr &connPtr) {
+              auto email_ptr = email_wptr.lock();
+              if ( !email_ptr ) {
+                  LOG_WARN << "EMail pointer gone";
+                  return;
+              }
+              if (connPtr->connected()) {
+                  // send request;
+                  LOG_TRACE << "Connection established!";
+              } else {
+                  LOG_TRACE << "Connection disconnect";
+                  EMail::m_emails.erase(email_ptr->m_uuid);   //Remove the email in list
+                  //thisPtr->onError(std::string("ReqResult::NetworkFailure"));
+              }
+          });
+      tcpSocket->setConnectionErrorCallback(
+        [email_wptr]() {
+          auto email_ptr = email_wptr.lock();
+          if ( !email_ptr ) {
+              LOG_ERROR << "EMail pointer gone";
+              return;
+          }
+          // can't connect to server
+          LOG_ERROR << "Bad Server address";
+          EMail::m_emails.erase(email_ptr->m_uuid);   //Remove the email in list
+          //thisPtr->onError(std::string("ReqResult::BadServerAddress"));
+      });
+      auto cb_( cb? cb : [](const std::string &msg){ LOG_INFO << "Default email callback : " << msg;});
+      tcpSocket->setMessageCallback(
+          [email_wptr, cb_](const trantor::TcpConnectionPtr &connPtr,
+                    trantor::MsgBuffer *msg) {
+              auto email_ptr = email_wptr.lock();
+              if ( !email_ptr ) {
+                  LOG_ERROR << "EMail pointer gone";
+                  return;
+              }
+              //email->m_socket->disconnect();
+              messagesHandle(connPtr, msg, email_ptr, cb_);
+          });
+      tcpSocket->connect(); //Start trying to send the email
     });
-    auto cb_( cb? cb : [](const std::string &msg){ LOG_INFO << "Default email callback : " << msg;});
-    tcpSocket->setMessageCallback(
-        [email_wptr, cb_](const trantor::TcpConnectionPtr &connPtr,
-                  trantor::MsgBuffer *msg) {
-            auto email_ptr = email_wptr.lock();
-            if ( !email_ptr ) {
-                LOG_ERROR << "EMail pointer gone";
-                return;
-            }
-            //email->m_socket->disconnect();
-            messagesHandle(connPtr, msg, email_ptr, cb_);
-        });
-    tcpSocket->connect(); //Start trying to send the email
     return email->m_uuid;
 }
