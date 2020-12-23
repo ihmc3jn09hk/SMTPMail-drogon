@@ -5,6 +5,10 @@ It is made as a plugin for the [drogon](https://github.com/an-tao/drogon) framew
 It can be included into the drogon build with little 
 modification of the class declaration.
 
+## Update [23-12-2020] Add DNS support
+
+Added DNS support. 
+
 ## Appreciations
 * The implementation takes SMTPClient for Qt from [kelvins](https://github.com/kelvins/SMTPClient) as reference.
 * There requires a delay SSL encryption from the Tcp-socket (named TcpClient in trantor/drogon) and the major 
