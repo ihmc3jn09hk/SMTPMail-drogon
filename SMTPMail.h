@@ -36,7 +36,7 @@ class SMTPMail : public drogon::Plugin<SMTPMail>
     /** Send an email
     * return : An ID of the email.
     */
-    std::string sendEmail( const std::string &mailServer,  //Mail server address E.g. 127.0.0.1
+    std::string sendEmail( const std::string &mailServer,  //Mail server address/dns E.g. 127.0.0.1/smtp.mail.com
                     const uint16_t &port,           //Port  E.g. 587
                     const std::string &from,        //Send from whom E.g. drogon@gmail.com
                     const std::string &to,          //Reciever       E.g. drogon@yahoo.com
