@@ -4,6 +4,9 @@ Simple Mail for the Drogon framework.
 It is made as a plugin for the [drogon](https://github.com/an-tao/drogon) framework.
 It can be included into the drogon build with little 
 modification of the class declaration.
+## Update [13-09-2021] Add support HTML content
+
+Added [HTML content support](https://github.com/ihmc3jn09hk/SMTPMail-drogon/pull/1).
 
 ## Update [23-12-2020] Add DNS support
 
