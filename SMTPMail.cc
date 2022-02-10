@@ -89,9 +89,7 @@ struct EMail
         m_status = Init;
     }
 
-    ~EMail()
-    {
-    }
+    ~EMail() = default;
 
     static std::unordered_map<std::string, std::shared_ptr<EMail>>
         m_emails;  // Container for processing emails
