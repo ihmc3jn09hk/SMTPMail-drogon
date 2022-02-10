@@ -2,7 +2,7 @@
 *
 * SMTPMail.cc *
 *
-* This plugin is for SMTP mail delievery for the Drogon web-framework.
+* This plugin is for SMTP mail delivery for the Drogon web-framework.
 Implementation
 * reference from the project "SMTPClient" with Qt5 by kelvins. Please check out
 * https://github.com/kelvins/SMTPClient.
@@ -114,17 +114,17 @@ void messagesHandle(const trantor::TcpConnectionPtr &connPtr,
                     const std::shared_ptr<EMail>& email,
                     const std::function<void(const std::string &msg)> &cb)
 {
-    std::string receievedMsg;
+    std::string receivedMsg;
     while (msg->readableBytes() > 0)
     {
         std::string buf(msg->peek(), msg->readableBytes());
-        receievedMsg.append(buf);
+        receivedMsg.append(buf);
         //        LOG_INFO << buf;
         msg->retrieveAll();
     }
-    LOG_TRACE << "receive: " << receievedMsg;
-    std::string responseCode(receievedMsg.begin(), receievedMsg.begin() + 3);
-    //    std::string responseMsg(receievedMsg.begin() + 4, receievedMsg.end());
+    LOG_TRACE << "receive: " << receivedMsg;
+    std::string responseCode(receivedMsg.begin(), receivedMsg.begin() + 3);
+    //    std::string responseMsg(receivedMsg.begin() + 4, receivedMsg.end());
 
     if (email->m_status == EMail::Init && responseCode == "220")
     {
@@ -194,13 +194,13 @@ void messagesHandle(const trantor::TcpConnectionPtr &connPtr,
         trantor::MsgBuffer out;
         std::string outMsg;
 
-        std::string screte(email->m_user);
+        std::string secret(email->m_user);
 
         // outMsg.append(base64_encode(reinterpret_cast<const unsigned
-        // char*>(screte.c_str()), screte.length()));
+        // char*>(secret.c_str()), secret.length()));
         outMsg.append(drogon::utils::base64Encode(
-            reinterpret_cast<const unsigned char *>(screte.c_str()),
-            screte.length()));
+                reinterpret_cast<const unsigned char *>(secret.c_str()),
+                secret.length()));
 
         outMsg.append("\r\n");
 
@@ -215,11 +215,11 @@ void messagesHandle(const trantor::TcpConnectionPtr &connPtr,
         trantor::MsgBuffer out;
         std::string outMsg;
 
-        std::string screte(email->m_passwd);
+        std::string secret(email->m_passwd);
 
         outMsg.append(drogon::utils::base64Encode(
-            reinterpret_cast<const unsigned char *>(screte.c_str()),
-            screte.length()));
+                reinterpret_cast<const unsigned char *>(secret.c_str()),
+                secret.length()));
         outMsg.append("\r\n");
 
         out.append(outMsg.data(), outMsg.size());
@@ -310,15 +310,15 @@ void messagesHandle(const trantor::TcpConnectionPtr &connPtr,
     }
     else if (email->m_status == EMail::Close)
     {
-        /*Callback here for succeed delievery is propable*/
+        /*Callback here for succeed delivery is probable*/
         cb("EMail sent. ID : " + email->m_uuid);
         return;
     }
     else
     {
         email->m_status = EMail::Close;
-        /*Callback here for notification is propable*/
-        cb(receievedMsg);
+        /*Callback here for notification is probable*/
+        cb(receivedMsg);
     }
 }
 
