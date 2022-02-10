@@ -114,7 +114,6 @@ void messagesHandle(const trantor::TcpConnectionPtr &connPtr,
                     const std::shared_ptr<EMail>& email,
                     const std::function<void(const std::string &msg)> &cb)
 {
-    auto msgSize = msg->readableBytes();
     std::string receievedMsg;
     while (msg->readableBytes() > 0)
     {
