@@ -343,7 +343,7 @@ std::string SMTPMail::sendEmail(
                  << "\nfrom : " << from << "\nto : " << to
                  << "\nsubject : " << subject << "\nuser : " << user
                  << "\npasswd : " << passwd;
-        return std::string();
+        return {};
     }
     LOG_TRACE << "New TcpClient : " << mailServer << ":" << port;
 
