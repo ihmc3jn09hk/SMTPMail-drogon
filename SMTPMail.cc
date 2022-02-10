@@ -68,21 +68,21 @@ struct EMail
     bool m_isHTML{false};
     std::shared_ptr<trantor::TcpClient> m_socket;
 
-    EMail(const std::string &from,
-          const std::string &to,
-          const std::string &subject,
-          const std::string &content,
-          const std::string &user,
-          const std::string &passwd,
+    EMail(std::string from,
+          std::string to,
+          std::string subject,
+          std::string content,
+          std::string user,
+          std::string passwd,
           bool isHTML,
           std::shared_ptr<trantor::TcpClient> socket)
-        : m_from(from),
-          m_to(to),
-          m_subject(subject),
-          m_content(content),
-          m_user(user),
-          m_passwd(passwd),
-          m_socket(socket),
+        : m_from(std::move(from)),
+          m_to(std::move(to)),
+          m_subject(std::move(subject)),
+          m_content(std::move(content)),
+          m_user(std::move(user)),
+          m_passwd(std::move(passwd)),
+          m_socket(std::move(socket)),
           m_isHTML(isHTML),
           m_uuid(drogon::utils::getUuid())
     {
