@@ -155,7 +155,7 @@ void messagesHandle(const trantor::TcpConnectionPtr &connPtr,
             [connPtr, out]()
             {
                 // LOG_TRACE << "SSL established";
-                connPtr->send(std::move(out));
+                connPtr->send(out);
             },
             false,
             false);
