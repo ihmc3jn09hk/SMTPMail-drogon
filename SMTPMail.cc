@@ -111,7 +111,7 @@ void SMTPMail::shutdown()
 
 void messagesHandle(const trantor::TcpConnectionPtr &connPtr,
                     trantor::MsgBuffer *msg,
-                    std::shared_ptr<EMail> email,
+                    const std::shared_ptr<EMail>& email,
                     const std::function<void(const std::string &msg)> &cb)
 {
     auto msgSize = msg->readableBytes();
