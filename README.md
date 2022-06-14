@@ -4,19 +4,12 @@ Simple Mail for the Drogon framework.
 It is made as a plugin for the [drogon](https://github.com/an-tao/drogon) framework.
 It can be included into the drogon build with little
 modification of the class declaration.
-## Update [13-06-2022] Add support HTML content
+## Updates 
+- **[ 13-06-2022 ] Fixed vulnerability issues reported by [Sam](https://snoopysecurity.github.io/about).**
+- [ 13-09-2021 ] Added [HTML content support](https://github.com/ihmc3jn09hk/SMTPMail-drogon/pull/1).
+- [ 23-12-2020 ] Added DNS support.
 
-Fixed vulnerability issues reported by [Sam](https://snoopysecurity.github.io/about).
-
-## Update [13-09-2021] Add support HTML content
-
-Added [HTML content support](https://github.com/ihmc3jn09hk/SMTPMail-drogon/pull/1).
-
-## Update [23-12-2020] Add DNS support
-
-Added DNS support.
-
-## Appreciations
+## Acknowledgement
 * The implementation takes SMTPClient for Qt from [kelvins](https://github.com/kelvins/SMTPClient) as reference.
 * There requires a delay SSL encryption from the Tcp-socket (named TcpClient in trantor/drogon) and the major
 author of drogon [reponsed](https://github.com/an-tao/drogon/issues/346) quickly.
