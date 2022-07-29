@@ -325,7 +325,9 @@ SMTPMail::sendEmail(const std::string &mailServer, const uint16_t &port,
   auto resolver = app().getResolver();
   resolver->resolve(
       mailServer, [email, port, cb](const trantor::InetAddress &addr) {
-        auto loop = app().getIOLoop(10); // Get the IO Loop
+        constexpr size_t defaultLoopId = 10;
+        auto loop = app().getIOLoop(defaultLoopId)->isInLoopThread() ? app().getIOLoop(defaultLoopId - 1)
+                                                                     : app().getIOLoop(defaultLoopId);
         assert(loop);                    // Should never be null
         trantor::InetAddress addr_(addr.toIp(), port, false);
         auto tcpSocket =
