@@ -325,9 +325,18 @@ SMTPMail::sendEmail(const std::string &mailServer, const uint16_t &port,
   auto resolver = app().getResolver();
   resolver->resolve(
       mailServer, [email, port, cb](const trantor::InetAddress &addr) {
-        constexpr size_t defaultLoopId = 10;
-        auto loop = app().getIOLoop(defaultLoopId)->isInLoopThread() ? app().getIOLoop(defaultLoopId - 1)
-                                                                     : app().getIOLoop(defaultLoopId);
+        constexpr size_t defaultLoopIdA = 10;
+        constexpr size_t defaultLoopIdB = 9;
+        auto loopA = app().getIOLoop(defaultLoopIdA);
+        auto loopB = app().getIOLoop(defaultLoopIdB);
+        
+        if ( loopA == loopB ) {
+          LOG_WARN << "Please provide at least 2 threads for this plugin";
+          return;
+        }
+
+        auto loop = loopA->isInLoopThread() ? loopB : loopA;
+        
         assert(loop);                    // Should never be null
         trantor::InetAddress addr_(addr.toIp(), port, false);
         auto tcpSocket =
