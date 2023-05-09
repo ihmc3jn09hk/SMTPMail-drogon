@@ -5,7 +5,8 @@ It is made as a plugin for the [drogon](https://github.com/an-tao/drogon) framew
 It can be included into the drogon build with little
 modification of the class declaration.
 ## Updates 
-- **[ 13-06-2022 ] Fixed vulnerability issues reported by [Sam](https://snoopysecurity.github.io/about).**
+- **[ 09-05-2023 ] Fixed TLS update by [HadesD](https://github.com/ihmc3jn09hk/SMTPMail-drogon/pull/7/commits/deeddd63573a574aef90228d9d0502fe23940308).**
+- [ 13-06-2022 ] Fixed vulnerability issues reported by [Sam](https://snoopysecurity.github.io/about).
 - [ 13-09-2021 ] Added [HTML content support](https://github.com/ihmc3jn09hk/SMTPMail-drogon/pull/1).
 - [ 23-12-2020 ] Added DNS support.
 
