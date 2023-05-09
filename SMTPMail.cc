@@ -131,12 +131,13 @@ void messagesHandle(const trantor::TcpConnectionPtr &connPtr,
 
     out.append(outMsg.data(), outMsg.size());
 
-    connPtr->startClientEncryption(
-        [connPtr, out]() {
+    auto policy = TLSPolicy::defaultClientPolicy();
+    policy->setValidate(false);
+    connPtr->startEncryption(policy, false,
+        [out](const trantor::TcpConnectionPtr& connPtr) {
           // LOG_TRACE << "SSL established";
           connPtr->send(out);
-        },
-        false, false);
+        });
 
     email->m_status = EMail::Auth;
   } else if (email->m_status == EMail::HandShake && responseCode == "250") {
